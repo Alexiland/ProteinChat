@@ -1,0 +1,36 @@
+model:
+  arch: proteinchat
+  model_type: pretrain_vicuna
+  freeze_protein_encoder: True
+  freeze_qformer: True
+  freeze_llama: True
+  freeze_lp: True
+
+  llama_model: "/data2/mingjia/vicuna-13b-v1.5"
+  
+  # generation configs
+  prompt: ""
+
+  max_txt_len: 405
+  end_sym: "###"
+  low_resource: True
+  peft_ckpt: '' # stage-2 ckpt
+  glm_load_path: /data2/mingjia/proteinglm-1b-mlm # should replace with your local path of protein GLM model.
+  stage1_ckpt: /data2/mingjia/protein/xtrimopglm/proteinchat_glm.pth # should replace with your local path of glm ckpt
+  # /data1/mingjia/protein/proteinchat_output/esm/20240702230/checkpoint_4.pth # esm ckpt
+
+datasets:
+  seq:
+    data_type: protein
+    build_info:
+      train:
+        storage: data/train_set
+
+run:
+  task: protein_text_pretrain
+  device: "cuda"
+  world_size: 1
+  dist_url: "env://"
+  distributed: True
+  printable: True
+
