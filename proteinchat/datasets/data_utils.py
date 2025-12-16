@@ -6,13 +6,9 @@
 """
 
 import logging
-import os
-import random as rnd
 import random
 from typing import List
-from tqdm import tqdm
 
-import decord
 import webdataset as wds
 import torch
 from torch.utils.data.dataset import IterableDataset
@@ -21,7 +17,6 @@ from proteinchat.common.registry import registry
 from proteinchat.datasets.datasets.base_dataset import ConcatDataset
 
 
-decord.bridge.set_bridge("torch")
 MAX_INT = registry.get("MAX_INT")
 
 
