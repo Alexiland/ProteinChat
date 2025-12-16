@@ -47,7 +47,7 @@ run:
   warmup_steps: 0
 
   seed: 42
-  output_dir: "./data"
+  output_dir: "./output" # which is ProteinChat/proteinchat/output, can set to other path
 
   amp: True
   resume_ckpt_path: null
