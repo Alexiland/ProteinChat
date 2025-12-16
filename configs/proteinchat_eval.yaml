@@ -6,7 +6,7 @@ model:
   freeze_llama: True
   freeze_lp: True
 
-  llama_model: "/data2/mingjia/vicuna-13b-v1.5"
+  llama_model: "lmsys/vicuna-13b-v1.5"
   
   # generation configs
   prompt: ""
@@ -15,16 +15,14 @@ model:
   end_sym: "###"
   low_resource: True
   peft_ckpt: '' # stage-2 ckpt
-  glm_load_path: /data2/mingjia/proteinglm-1b-mlm # should replace with your local path of protein GLM model.
-  stage1_ckpt: /data2/mingjia/protein/xtrimopglm/proteinchat_glm.pth # should replace with your local path of glm ckpt
-  # /data1/mingjia/protein/proteinchat_output/esm/20240702230/checkpoint_4.pth # esm ckpt
+  glm_load_path: "mignonjia/proteinglm-1b-mlm-sft" # HF path to the protein encoder and projection layer of ProteinChat
+  stage1_ckpt: '' # do not need this if load from proteinglm-1b-mlm-sft model
 
 datasets:
   seq:
     data_type: protein
     build_info:
-      train:
-        storage: data/train_set
+      use_hf: True
 
 run:
   task: protein_text_pretrain

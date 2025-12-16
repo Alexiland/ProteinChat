@@ -12,8 +12,9 @@ model:
   # freeze_lp: True
   # freeze_llama: False
 
-  llama_model: "/data1/mingjia/vicuna-13b-v1.5"
+  llama_model: "lmsys/vicuna-13b-v1.5" # HF path to pretrained LLaMA model as language backbone
   prompt: ""
+  glm_load_path: "proteinglm/proteinglm-1b-mlm" # HF path to the pretrained ProteinGLM model as protein encoder
 
   max_txt_len: 405
   end_sym: "###"
@@ -26,8 +27,7 @@ datasets:
   seq:
     data_type: protein
     build_info:
-      train:
-        storage: data/train_set
+      use_hf: True
 
 run:
   task: protein_text_pretrain
@@ -49,7 +49,7 @@ run:
   warmup_steps: 2000
 
   seed: 42
-  output_dir: "/data1/mingjia/protein/proteinchat_output/esm"
+  output_dir: "./data"
 
   amp: True
   resume_ckpt_path: null
