@@ -14,7 +14,7 @@ model:
 
   llama_model: "lmsys/vicuna-13b-v1.5" # HF path to pretrained LLaMA model as language backbone
   prompt: ""
-  glm_load_path: "proteinglm/proteinglm-1b-mlm" # HF path to the pretrained ProteinGLM model as protein encoder
+  glm_load_path: "biomap-research/proteinglm-1b-mlm" # HF path to the pretrained ProteinGLM model as protein encoder
 
   max_txt_len: 405
   end_sym: "###"

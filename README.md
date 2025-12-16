@@ -1,4 +1,10 @@
 # Multi-Modal Large Language Model Enables Protein Function Prediction
+<div align="center">
+
+[![Data](https://img.shields.io/badge/Data-4d5eff?style=for-the-badge&logo=huggingface&logoColor=ffffff&labelColor)](https://huggingface.co/datasets/mignonjia/ProteinChatQA)
+[![Model](https://img.shields.io/badge/Model-4d5eff?style=for-the-badge&logo=huggingface&logoColor=ffffff&labelColor)](https://huggingface.co/mignonjia/proteinglm-1b-mlm-sft)
+</div>
+
 ## Examples
 
 ![Eg1](fig/example.png) 
@@ -29,36 +35,33 @@ conda activate proteinchat
 
 Verify the installation of `torch` and `torchvision` is successful by running `python -c "import torchvision; print(torchvision.__version__)"`. If it outputs the version number without any warnings or errors, then you are good to go. __If it outputs any warnings or errors__, try to uninstall `torch` by `conda uninstall pytorch torchvision torchaudio cudatoolkit` and then reinstall them following [here](https://pytorch.org/get-started/previous-versions/#v1121). You need to find the correct command according to the CUDA version your GPU driver supports (check `nvidia-smi`). 
 
-**2. Prepare the dataset**
+For aarch64 machines:
 
-The dataset contains 462,019 proteins (represented using 3D structures) with 1.5 million instructions. It is curated from the [Swiss-Prot Dataset](https://www.uniprot.org/uniprotkb?query=*&facets=reviewed%3Atrue). 
-The dataset `data.tar.gz` (170 MB) can be downloaded [here](https://drive.google.com/file/d/1ou2222905sAVljblc1VUH78Q4AQLYRjl/view?usp=sharing). Copy it under this folder and run 
 ```bash
-tar -xvf data.tar.gz
-```
-You will obtain a `data` folder with three subfolders `train_set`, `valid_set`, and `test_set`.
+cd ProteinChat
+conda env create -f environment_arm.yml
+conda activate proteinchat_arm
 
-**3. Prepare the pretrained Vicuna weights**
+# First, verify if torch from environment_arm.yml works
+python -c "import torch; print(torch.__version__); print('CUDA available:', torch.cuda.is_available())"
 
-The current version of ProteinChat is built on Vicuna-13B-v1.5.
-Please download Vicuna weights from [https://huggingface.co/lmsys/vicuna-13b-v1.5](https://huggingface.co/lmsys/vicuna-13b-v1.5).
-Then, set the path to the vicuna weight in the config files 
-[configs/proteinchat_stage1.yaml](configs/proteinchat_stage1.yaml#L15) and [configs/proteinchat_stage2.yaml](configs/proteinchat_stage2.yaml#L15).
-
-**4. Prepare the xtrimoPGLM protein encoder**
-
-Download proteinglm-1b-mlm[https://huggingface.co/Bo1015/proteinglm-1b-mlm] to your local machine, and in your downloaded proteinglm folder, modify code Line715 - Line720 of [modeling_proteinglm.py](https://huggingface.co/Bo1015/proteinglm-1b-mlm/blob/main/modeling_proteinglm.py) to the following:
-```
-        if output_hidden_states:
-            all_hidden_states = all_hidden_states + (hidden_states,)
-
-        # Final layer norm.
-        if self.post_layer_norm:
-            hidden_states = self.final_layernorm(hidden_states)
+# Similarly to above, if torch needs to be reinstalled, run:
+# pip uninstall -y torch torchaudio torchvision
+# Select your own version from https://pytorch.org/get-started/previous-versions/, such as:
+# pip install torch==2.8.0 torchvision==0.23.0 torchaudio==2.8.0 --index-url https://download.pytorch.org/whl/cu129
 ```
 
-Then in [configs/proteinchat_eval.yaml](configs/proteinchat_eval.yaml#L18), set `glm_load_path` to your local path of proteinglm.
-Also, download ProteinChat's trained weights from [Google Drive](https://drive.google.com/file/d/1isngFWX5PNKY6fuS8bRVSA9OVUGJODMO/view?usp=sharing) and set its path to `stage1_ckpt` in [configs/proteinchat_eval.yaml](configs/proteinchat_eval.yaml#L19).
+**2. Data and Model**
+
+This codebase loads [data](https://huggingface.co/datasets/mignonjia/ProteinChatQA) and [model](https://huggingface.co/mignonjia/proteinglm-1b-mlm-sft) directly from hugging face.
+
+To access these resources, you need to set your Hugging Face token by running:
+
+```bash
+export HF_TOKEN=your_token_here
+```
+
+Alternatively, you can use `huggingface-cli login` to authenticate interactively.
 
 ### Training
 **You need at least 55 GB GPU memory for the training.** 

@@ -61,9 +61,9 @@ class ProteinChat(Blip2Base):
             dtype = torch.float
 
         self.protein_tokenizer  = AutoTokenizer.from_pretrained(glm_load_path, trust_remote_code=True, use_fast=True)
-        if "sft" in glm_load_path: # evaluate proteinchat ckpt, which is based on a previous version of ProteinGLM (not the current HF version)
+        if "proteinglm-1b-mlm-sft" in glm_load_path: # ProteinChat ckpt is based on a previous version of ProteinGLM (not the current HF version)
             self.protein_encoder = AutoModelForMaskedLM.from_pretrained(glm_load_path, rotary_embedding_2d=True, trust_remote_code=True, torch_dtype=dtype, ignore_mismatched_sizes=True)
-        elif "proteinglm" in glm_load_path: # load ProteinGLM ckpt directly from HF
+        elif "proteinglm-1b-mlm" in glm_load_path: # load ProteinGLM ckpt directly from HF
             self.protein_encoder = AutoModelForMaskedLM.from_pretrained(glm_load_path, trust_remote_code=True, torch_dtype=dtype, ignore_mismatched_sizes=True)
         
         if torch.cuda.is_available():
