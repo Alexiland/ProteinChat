@@ -1,24 +1,21 @@
 import logging
-
-# import sys
-# sys.path.append('/home/mingjia/ProteinChat/anti_1b_code')
+from typing import List
 
 import torch
 from torch.cuda.amp import autocast as autocast
 import torch.nn as nn
 from argparse import ArgumentParser
 import json
+import os
 from transformers import AutoModelForMaskedLM, AutoTokenizer
+from huggingface_hub import hf_hub_download
 
 from proteinchat.common.registry import registry
 from proteinchat.models.blip2 import Blip2Base, disabled_train
-from proteinchat.models.modeling_llama import LlamaForCausalLM
-from transformers import LlamaTokenizer
+# from proteinchat.models.modeling_llama import LlamaForCausalLM
+from transformers import LlamaTokenizer, LlamaForCausalLM
 
-# from anti_1b_code.estimated_ppl import get_embedding, initialize_model_and_tokenizer
 from peft import get_peft_model, LoraConfig
-
-import time
 
 @registry.register_model("proteinchat")
 class ProteinChat(Blip2Base):
@@ -64,7 +61,11 @@ class ProteinChat(Blip2Base):
             dtype = torch.float
 
         self.protein_tokenizer  = AutoTokenizer.from_pretrained(glm_load_path, trust_remote_code=True, use_fast=True)
-        self.protein_encoder = AutoModelForMaskedLM.from_pretrained(glm_load_path, rotary_embedding_2d=True, trust_remote_code=True, torch_dtype=dtype, ignore_mismatched_sizes=True)
+        if "sft" in glm_load_path: # evaluate proteinchat ckpt, which is based on a previous version of ProteinGLM (not the current HF version)
+            self.protein_encoder = AutoModelForMaskedLM.from_pretrained(glm_load_path, rotary_embedding_2d=True, trust_remote_code=True, torch_dtype=dtype, ignore_mismatched_sizes=True)
+        elif "proteinglm" in glm_load_path: # load ProteinGLM ckpt directly from HF
+            self.protein_encoder = AutoModelForMaskedLM.from_pretrained(glm_load_path, trust_remote_code=True, torch_dtype=dtype, ignore_mismatched_sizes=True)
+        
         if torch.cuda.is_available():
             self.protein_encoder = self.protein_encoder.cuda()
 
@@ -86,7 +87,6 @@ class ProteinChat(Blip2Base):
                 torch_dtype=torch.float16,
                 load_in_8bit=True,
                 device_map='auto'
-                # device_map={'': device_8bit}
             )
         else:
             self.llama_model = LlamaForCausalLM.from_pretrained(
@@ -114,6 +114,35 @@ class ProteinChat(Blip2Base):
         self.glm_llama_proj = nn.Linear(
             2048, self.llama_model.config.hidden_size
         )
+        
+        # Try to load projection weights from local path or Hugging Face
+        proj_weights = None
+        if os.path.isdir(glm_load_path):
+            # Local path
+            proj_ckpt_path = os.path.join(glm_load_path, "glm_llama_proj.pt")
+            if os.path.exists(proj_ckpt_path):
+                print(f"Loading glm_llama_proj weights from: {proj_ckpt_path}")
+                proj_weights = torch.load(proj_ckpt_path, map_location="cpu")
+        else:
+            # Hugging Face path - try to download glm_llama_proj.pt
+            try:
+                proj_ckpt_path = hf_hub_download(
+                    repo_id=glm_load_path,
+                    filename="glm_llama_proj.pt",
+                    local_files_only=False
+                )
+                print(f"Loading glm_llama_proj weights from Hugging Face: {glm_load_path}")
+                proj_weights = torch.load(proj_ckpt_path, map_location="cpu")
+            except Exception as e:
+                # File doesn't exist on Hugging Face, skip loading
+                pass
+        
+        if proj_weights is not None:
+            self.glm_llama_proj.load_state_dict({
+                'weight': proj_weights['glm_llama_proj.weight'],
+                'bias': proj_weights['glm_llama_proj.bias']
+            })
+        
         if freeze_lp:
             for name, param in self.glm_llama_proj.named_parameters():
                 param.requires_grad = False
@@ -208,6 +237,11 @@ class ProteinChat(Blip2Base):
         inputs_embeds = torch.cat([bos_embeds, prompt_embeds, to_regress_embeds], dim=1)
         attention_mask = torch.cat([atts_bos, atts_protein, to_regress_tokens.attention_mask], dim=1)
 
+        # Ensure consistent dtype - convert to float32 if needed
+        llama_dtype = next(self.llama_model.parameters()).dtype
+        if inputs_embeds.dtype != llama_dtype:
+            inputs_embeds = inputs_embeds.to(llama_dtype)
+
         with self.maybe_autocast():
             outputs = self.llama_model(
                 inputs_embeds=inputs_embeds,
@@ -226,7 +260,7 @@ class ProteinChat(Blip2Base):
     @classmethod
     def from_config(cls, cfg):
 
-        llama_model = cfg.get("llama_model")
+        llama_model = cfg.get("llama_model", "lmsys/vicuna-13b-v1.5")
 
         freeze_protein_encoder = cfg.get("freeze_protein_encoder", True)
         freeze_lp = cfg.get("freeze_lp", False)
@@ -237,7 +271,7 @@ class ProteinChat(Blip2Base):
         max_txt_len = cfg.get("max_txt_len", 32)
         end_sym = cfg.get("end_sym", '\n')
         embedding_agg = cfg.get("embedding_agg", 1)
-        glm_load_path = cfg.get("glm_load_path", 1)
+        glm_load_path = cfg.get("glm_load_path", "mignonjia/proteinglm-1b-mlm-sft")
 
 
         model = cls(
@@ -253,6 +287,8 @@ class ProteinChat(Blip2Base):
             device_8bit=device_8bit,
         )
 
+        # stage1_ckpt is no longer needed if using sft model (e.g., mignonjia/proteinglm-1b-mlm-sft)
+        # The sft model already contains the checkpoint weights in model.safetensors and glm_llama_proj.pt.
         stage1_ckpt = cfg.get("stage1_ckpt", "")  # load weights of encoder and LP
         if stage1_ckpt:
             print("Load GLM and LP Checkpoint: {}".format(stage1_ckpt))

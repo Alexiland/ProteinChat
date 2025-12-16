@@ -280,10 +280,14 @@ class BaseTask:
 
             # update gradients every accum_grad_iters iterations
             if (i + 1) % accum_grad_iters == 0:
+                # Gradient clipping to prevent NaN
                 if use_amp:
+                    scaler.unscale_(optimizer)
+                    torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)
                     scaler.step(optimizer)
                     scaler.update()                     
-                else:    
+                else:
+                    torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)
                     optimizer.step()
                 optimizer.zero_grad()
             end_optimizer = time.time()
