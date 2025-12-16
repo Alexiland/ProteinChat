@@ -19,7 +19,6 @@ dependencies:
     - async-timeout==4.0.2
     - attrs==22.2.0
     - bitsandbytes==0.37.0
-    - cchardet==2.1.7
     - chardet==5.1.0
     - contourpy==1.0.7
     - cycler==0.11.0
@@ -52,7 +51,6 @@ dependencies:
     - omegaconf==2.3.0
     - opencv-python==4.7.0.72
     - iopath==0.1.10
-    - decord==0.6.0
     - tenacity==8.2.2
     - peft
     - pycocoevalcap
