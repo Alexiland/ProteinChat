@@ -4,10 +4,7 @@
  SPDX-License-Identifier: BSD-3-Clause
  For full license text, see the LICENSE_Lavis file in the repo root or https://opensource.org/licenses/BSD-3-Clause
 """
-import json
 import argparse
-import os
-os.environ['HF_HOME'] = '/data1/mingjia/cache/'
 import random
 
 import numpy as np
